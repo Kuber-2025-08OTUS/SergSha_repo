@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-ingress
+  namespace: homework
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: homework.otus
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: web-service
+            port:
+              number: 8080
+      - pathType: ImplementationSpecific
+        path: /homepage(/|$)(.*)
+        backend:
+          service:
+            name: web-service
+            port: 
+              number: 8080
