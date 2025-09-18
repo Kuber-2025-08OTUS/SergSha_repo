@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  namespace: homework
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.29.1
+        resources:
+          limits:
+            cpu: "1"
+            memory: 512Mi
+          requests:
+            cpu: "0.2"
+            memory: 256Mi
+        command: ["/bin/sh","-c"]
+        args: ["sed -i 's/listen  .*/listen 8000;/g' /etc/nginx/conf.d/default.conf && sed -i 's|root  .*|root /homework;|g' /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"]
+        ports:
+        - containerPort: 8000
+        volumeMounts:
+        - name: workvolume
+          mountPath: "/homework"
+        - name: configvolume
+          mountPath: "/homework/conf"
+        lifecycle:
+          preStop:
+            exec:
+              command: ['rm', '-f', '/homework/index.html']
+        readinessProbe:
+          httpGet:
+            path: /index.html
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      initContainers:
+      - name: initcontainer
+        image: busybox:1.28
+        command: ["/bin/sh","-c"]
+        args: ["wget -O /init/index.html https://otus.ru"]
+        volumeMounts:
+        - name: workvolume
+          mountPath: "/init"
+      volumes:
+      - name: workvolume
+        persistentVolumeClaim:
+          claimName: web-pvc
+      - name: configvolume
+        configMap:
+          name: web-cm
+      nodeSelector:
+        homework: 'true'
+  strategy:
+   type: RollingUpdate
+   rollingUpdate:
+     maxUnavailable: 1
