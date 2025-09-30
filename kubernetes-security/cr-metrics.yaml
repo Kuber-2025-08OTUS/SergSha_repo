@@ -1,0 +1,8 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: metrics-reader
+  # "namespace" omitted since ClusterRoles are not namespaced
+rules:
+- nonResourceURLs: ["/metrics", "/metrics/*"] # '*' in a nonResourceURL is a suffix glob match
+  verbs: ["get"]
