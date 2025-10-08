@@ -1,0 +1,269 @@
+# Default values for webchart.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
+replicaCount: 3
+
+serviceAccountName: monitoring
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+
+# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+image:
+  repository: nginx
+  # This sets the pull policy for images.
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "1.29.1"
+
+command: "['/bin/sh','-c']"
+
+args: "[\"sed -i 's/listen  .*/listen 8000;/g' /etc/nginx/conf.d/default.conf && \
+  sed -i 's|root  .*|root /homework;|g' /etc/nginx/conf.d/default.conf && \
+  curl --silent --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+    --header \\\"Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\\\" \
+    -X GET https://kubernetes.default.svc/metrics > /homework/metrics.html && \
+  exec nginx -g 'daemon off;'\"]"
+
+ports:
+- name: http
+  containerPort: 8000
+  protocol: TCP
+
+initContainers:
+- name: initcontainer
+  image: 
+    repository: busybox
+    tag: "1.28"
+  command: "['/bin/sh','-c']"
+  args: "['wget -O /init/index.html https://otus.ru']"
+  volumeMounts:
+    - name: workvolume
+      mountPath: "/init"
+
+# This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+imagePullSecrets: []
+# This is to override the chart name.
+nameOverride: ""
+fullnameOverride: ""
+
+# This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
+serviceAccount:
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+- name: monitoring
+  # Specifies whether a service account should be created
+  create: true
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+- name: cd
+  # Specifies whether a service account should be created
+  create: true
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+
+clusterRole:
+- name: adminic
+  rules:
+  - apiGroups: [""]
+    resources: ["*"]
+    verbs: ["*"]
+- name: metrics-reader
+  rules:
+  - nonResourceURLs: ["/metrics", "/metrics/*"]
+    verbs: ["get"]
+
+clusterRoleBinding:
+- name: adminic
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: adminic
+  subjects:
+  - kind: ServiceAccount
+    name: cd
+    namespace: homework
+- name: metrics-reader
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: metrics-reader
+  subjects:
+  - kind: ServiceAccount
+    name: monitoring
+    namespace: homework
+
+storageClass:
+- name: web-sc
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+  provisioner: k8s.io/minikube-hostpath
+  reclaimPolicy: Retain
+  volumeBindingMode: Immediate
+
+persistentVolumeClaim:
+- name: web-pvc
+  # namespace: homework
+  storageClassName: web-sc
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+# This is for setting Kubernetes Annotations to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+podAnnotations: {}
+# This is for setting Kubernetes Labels to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+podLabels:
+  app: nginx
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+service:
+  # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  type: ClusterIP
+  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
+  port: 8080
+
+# This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
+ingress:
+  enabled: true
+  className: ""
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: homework.otus
+      paths:
+        - path: /
+          pathType: Prefix
+        - path: /homepage
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+# -- Expose the service via gateway-api HTTPRoute
+# Requires Gateway API resources and suitable controller installed within the cluster
+# (see: https://gateway-api.sigs.k8s.io/guides/)
+httpRoute:
+  # HTTPRoute enabled.
+  enabled: false
+  # HTTPRoute annotations.
+  annotations: {}
+  # Which Gateways this Route is attached to.
+  parentRefs:
+    - name: gateway
+      sectionName: http
+    # namespace: default
+  # Hostnames matching HTTP header.
+  hostnames:
+  - chart-example.local
+  # List of rules and filters applied.
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /headers
+  #   filters:
+  #   - type: RequestHeaderModifier
+  #     requestHeaderModifier:
+  #       set:
+  #       - name: My-Overwrite-Header
+  #         value: this-is-the-only-value
+  #       remove:
+  #       - User-Agent
+  # - matches:
+  #   - path:
+  #       type: PathPrefix
+  #       value: /echo
+  #     headers:
+  #     - name: version
+  #       value: v2
+
+resources: 
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+livenessProbe: {}
+  # httpGet:
+  #   path: /
+  #   port: http
+readinessProbe:
+  httpGet:
+    path: /index.html
+    port: 8000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+
+# This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Additional volumes on the output Deployment definition.
+volumes:
+- name: workvolume
+  persistentVolumeClaim:
+    claimName: web-pvc
+- name: configvolume
+  configMap:
+    name: web-cm
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts:
+- name: workvolume
+  mountPath: "/homework"
+- name: configvolume
+  mountPath: "/homework/conf"
+
+nodeSelector:
+  homework: 'true'
+
+tolerations: []
+
+affinity: {}
+
+configMap:
+- name: web-cm
+  # namespace: homework
+  data:
+    file: |
+      This file is from configMap
+    
