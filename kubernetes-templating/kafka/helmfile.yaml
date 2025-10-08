@@ -1,0 +1,35 @@
+# Helmfile конфигурация для развертывания Kafka
+# apiVersion: v1
+# repositories:
+#   - name: bitnami
+#     url: https://charts.bitnami.com/bitnami
+
+releases:
+  # Production release of Kafka
+  - name: kafka-prod
+    namespace: prod
+    chart: oci://registry-1.docker.io/bitnamicharts/kafka
+    version: 25.3.5  # The current version of the chart that supports Kafka 3.5.1
+    values:
+      - values-prod.yaml
+    # wait: true
+    # timeout: 600
+    # needs:
+    #   - kafka-dev  # Dependency for sequential deployment
+
+  # Development release of Kafka  
+  - name: kafka-dev
+    namespace: dev
+    chart: oci://registry-1.docker.io/bitnamicharts/kafka
+    version: 32.4.3  # The latest version of the chart
+    values:
+      - values-dev.yaml
+    # wait: true
+    # timeout: 300
+
+# Common settings for all releases
+helmDefaults:
+  createNamespace: true
+#   wait: true
+#   timeout: 300
+#   atomic: false

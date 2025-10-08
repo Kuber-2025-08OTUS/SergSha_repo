@@ -1,0 +1,42 @@
+# Конфигурация для Production окружения
+global:
+  kafkaNamespace: prod
+
+# replicaCount: 3
+
+image:
+  repository: bitnamilegacy/kafka
+  tag: 3.5.2-debian-12-r30
+  # tag: 3.5.1
+
+auth:
+  clientProtocol: sasl_plaintext
+  interBrokerProtocol: sasl_plaintext
+  saslMechanisms: plain
+  saslInterBrokerMechanism: plain
+  
+  clientUsers:
+    - kafkauser
+  clientPasswords:
+    - kafkauser123
+
+controller:
+  replicaCount: 5
+
+listeners:
+  client:
+    protocol: SASL_PLAINTEXT
+  interbroker:
+    protocol: SASL_PLAINTEXT
+
+persistence:
+  enabled: true
+  size: 2Gi
+
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "250m"
+  limits:
+    memory: "1Gi"
+    cpu: "500m"
