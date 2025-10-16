@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nginx-monitor
+  namespace: homework
+  labels:
+    app: nginx
+spec:
+  selector:
+    matchLabels:
+      app: nginx-exporter  # Выбираем сервис экспортера
+  endpoints:
+  - port: metrics  # Порт из service
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+  namespaceSelector:
+    matchNames:
+    - homework
