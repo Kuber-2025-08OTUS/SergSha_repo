@@ -38,16 +38,6 @@ yc_folder_id = "..."
 terraform init && terraform apply -auto-approve
 ```
 
-В качестве балансировщика будем использовать Contour Ingress (https://projectcontour.io/):
-```bash
-kubectl apply -f https://projectcontour.io/quickstart/contour.yaml
-```
-```bash
-helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-helm repo update
-helm install ingress-nginx ingress-nginx/ingress-nginx
-```
-
 Получить ключи:
 ```bash
 ACCESS_KEY=$(terraform output -raw loki_access_key)
@@ -134,4 +124,6 @@ kubectl get secret -n loki grafana -o jsonpath="{.data.admin-password}" | base64
   Выбрать datasource "Loki"
   Import
 
-Можно также открыть в браузере http://loki.homework.otus/metrics, где можем увидеть метрики.
+![alt text](<pics/Screenshot from 2025-10-19 14-49-43.png>)
+
+Можно также открыть в браузере http://loki.homework.otus/metrics, где можно увидеть метрики.
