@@ -1,0 +1,123 @@
+loki:
+  commonConfig:
+    replication_factor: 1
+  schemaConfig:
+    configs:
+      - from: 2024-04-01
+        store: tsdb
+        object_store: s3
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+  storageConfig:
+    aws:
+      s3: s3://ru-central1/storage.yandexcloud.net/loki-logs-bucket    ###
+      endpoint: storage.yandexcloud.net                                ###
+      region: ru-central1
+      # bucketnames: loki-logs-bucket                                  ###
+      s3forcepathstyle: false
+      insecure: false                                                  ###
+  pattern_ingester:
+      enabled: true
+  limits_config:
+    allow_structured_metadata: true
+    volume_enabled: true
+    retention_period: 672h # 28 days retention
+
+  storage:
+    type: s3
+    bucketNames:
+        chunks: loki-logs-bucket
+        ruler: loki-logs-bucket
+        admin: loki-logs-bucket
+    # s3:
+    #   # s3 URL can be used to specify the endpoint, access key, secret key, and bucket name this works well for S3 compatible storages or are hosting Loki on-premises and want to use S3 as the storage backend. Either use the s3 URL or the individual fields below (AWS endpoint, region, secret).
+    #   s3: s3://ru-central1/storage.yandexcloud.net/loki-logs-bucket
+    #   # AWS endpoint URL
+    #   endpoint: storage.yandexcloud.net
+    #   # AWS region where the S3 bucket is located
+    #   region: ru-central1
+    #   # # AWS secret access key
+    #   # secretAccessKey: <your-secret-access-key>
+    #   # # AWS access key ID
+    #   # accessKeyId: <your-access-key-id>
+    #   # # AWS signature version (e.g., v2 or v4)
+    #   # signatureVersion: <your-signature-version>
+    #   # Forces the path style for S3 (true/false)
+    #   s3ForcePathStyle: false
+    #   # Allows insecure (HTTP) connections (true/false)
+    #   insecure: false
+    #   # HTTP configuration settings
+    #   http_config: {}
+
+  auth_enabled: false
+
+# Disable minio storage
+minio:
+  enabled: false
+
+deploymentMode: SingleBinary
+
+singleBinary:
+  replicas: 1
+  persistence:
+    storageClass: yc-network-ssd
+    accessModes:
+      - ReadWriteOnce
+    size: 10Gi
+
+  tolerations:
+    - key: "node-role"
+      operator: "Equal"
+      value: "infra"
+      effect: "NoSchedule"
+
+  nodeSelector:
+    node-role: "infra"
+
+# Zero out replica counts of other deployment modes
+backend:
+  replicas: 0
+read:
+  replicas: 0
+write:
+  replicas: 0
+
+ingester:
+  replicas: 0
+querier:
+  replicas: 0
+queryFrontend:
+  replicas: 0
+queryScheduler:
+  replicas: 0
+distributor:
+  replicas: 0
+compactor:
+  replicas: 0
+indexGateway:
+  replicas: 0
+bloomCompactor:
+  replicas: 0
+bloomGateway:
+  replicas: 0
+
+memcached:
+  enabled: false
+memcachedChunks:
+  enabled: false
+memcachedFrontend:
+  enabled: false
+memcachedIndexQueries:
+  enabled: false
+
+existingSecret: "loki-bucket-creds"
+
+promtail:
+  enabled: true
+  config:
+    clients:
+      - url: http://loki.loki.svc.cluster.local:3100/loki/api/v1/push
+  tolerations:
+    - operator: "Exists"
