@@ -1,0 +1,28 @@
+replicas: 1
+
+persistence:
+  enabled: true
+  size: 10Gi
+  # storageClassName: "yc-network-ssd"
+
+tolerations:
+  - key: "node-role"
+    operator: "Equal"
+    value: "infra"
+    effect: "NoSchedule"
+
+nodeSelector:
+  node-role: "infra"
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        type: loki
+        url: http://loki.loki.svc.cluster.local:3100
+        access: proxy
+        isDefault: true
+
+adminUser: "admin"
+adminPassword: "admin123"
