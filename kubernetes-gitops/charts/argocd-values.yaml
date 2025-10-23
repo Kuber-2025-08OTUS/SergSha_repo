@@ -1,0 +1,63 @@
+# global:
+#   image:
+#     tag: "v2.9.3"
+
+server:
+  name: server
+  replicaCount: 1
+  service:
+    type: ClusterIP  #LoadBalancer
+  nodeSelector:
+    node-role: infra
+  tolerations:
+  - key: "node-role"
+    operator: "Equal"
+    value: "infra"
+    effect: "NoSchedule"
+
+repoServer:
+  name: repo-server
+  replicaCount: 1
+  nodeSelector:
+    node-role: infra
+  tolerations:
+  - key: "node-role"
+    operator: "Equal"
+    value: "infra"
+    effect: "NoSchedule"
+
+applicationSet:
+  replicaCount: 1
+  nodeSelector:
+    node-role: infra
+  tolerations:
+  - key: "node-role"
+    operator: "Equal"
+    value: "infra"
+    effect: "NoSchedule"
+
+controller:
+  name: application-controller
+  replicaCount: 1
+  nodeSelector:
+    node-role: infra
+  tolerations:
+  - key: "node-role"
+    operator: "Equal"
+    value: "infra"
+    effect: "NoSchedule"
+
+redis:
+  nodeSelector:
+    node-role: infra
+  tolerations:
+  - key: "node-role"
+    operator: "Equal"
+    value: "infra"
+    effect: "NoSchedule"
+
+# configs:
+#   secret:
+#     argocdServerAdminPassword: "$2a$10$rElQ6h4s2FHPYVhB5D2Qw.LkFgR8p6qkYkLdKjJZJZJZJZJZJZJZJ"
+#   params:
+#     server.insecure: "true"
