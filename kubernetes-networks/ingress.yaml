@@ -7,7 +7,7 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /index.html
 spec:
   rules:
-  - host: homework.otus
+  - host: network.homework.otus
     http:
       paths:
       - path: /
