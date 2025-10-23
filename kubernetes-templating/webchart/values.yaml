@@ -107,7 +107,7 @@ storageClass:
 - name: web-sc
   annotations:
     storageclass.kubernetes.io/is-default-class: "false"
-  provisioner: k8s.io/minikube-hostpath
+  provisioner: rancher.io/local-path # k8s.io/minikube-hostpath
   reclaimPolicy: Retain
   volumeBindingMode: Immediate
 
