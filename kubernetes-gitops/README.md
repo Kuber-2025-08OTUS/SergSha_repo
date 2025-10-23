@@ -92,24 +92,36 @@ SSH private key data: <Private SSH Key>
 
 Нажимаем CONNECT
 
+![alt text](<pics/Screenshot from 2025-10-23 23-25-44.png>)
 
+Убедиться, что подключение к репозитории github.com имеет статус Successful
 
+![alt text](<pics/Screenshot from 2025-10-23 23-35-13.png>)
+
+Запустить следующие команды:
+- создать проект otus:
 ```bash
 kubectl apply -f argocd-project.yaml
+```
+
+- создать приложение kubernetes-networks:
+```bash
 kubectl apply -f app-kubernetes-networks.yaml
+```
+
+- создать приложение kubernetes-templating:
+```bash
 kubectl apply -f app-kubernetes-templating.yaml
 ```
 
-
-После развертывания выполнить:
-
+После развертывания выполнить для проверки:
 ```bash
 kubectl get node -o wide --show-labels
 ```
 ```
 NAME                        STATUS   ROLES    AGE    VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION      CONTAINER-RUNTIME     LABELS
-cl15uu8ehu4ufnepn2g1-ahol   Ready    <none>   111m   v1.30.1   10.10.0.31    <none>        Ubuntu 20.04.6 LTS   5.4.0-216-generic   containerd://1.7.25   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/instance-type=standard-v3,beta.kubernetes.io/os=linux,failure-domain.beta.kubernetes.io/zone=ru-central1-d,kubernetes.io/arch=amd64,kubernetes.io/hostname=cl15uu8ehu4ufnepn2g1-ahol,kubernetes.io/os=linux,node-role=infra,node.kubernetes.io/instance-type=standard-v3,node.kubernetes.io/kube-proxy-ds-ready=true,node.kubernetes.io/masq-agent-ds-ready=true,node.kubernetes.io/node-problem-detector-ds-ready=true,topology.kubernetes.io/zone=ru-central1-d,yandex.cloud/node-group-id=catj1i90iu6q1ae9obbs,yandex.cloud/pci-topology=k8s,yandex.cloud/preemptible=false
-cl1buk59kess38o2a2i6-iriz   Ready    <none>   111m   v1.30.1   10.10.0.29    <none>        Ubuntu 20.04.6 LTS   5.4.0-216-generic   containerd://1.7.25   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/instance-type=standard-v3,beta.kubernetes.io/os=linux,failure-domain.beta.kubernetes.io/zone=ru-central1-d,kubernetes.io/arch=amd64,kubernetes.io/hostname=cl1buk59kess38o2a2i6-iriz,kubernetes.io/os=linux,node.kubernetes.io/instance-type=standard-v3,node.kubernetes.io/kube-proxy-ds-ready=true,node.kubernetes.io/masq-agent-ds-ready=true,node.kubernetes.io/node-problem-detector-ds-ready=true,topology.kubernetes.io/zone=ru-central1-d,yandex.cloud/node-group-id=cat3hdv9umd3ngquua2l,yandex.cloud/pci-topology=k8s,yandex.cloud/preemptible=false
+cl1a0l9v65916hkp0k0s-atix   Ready    <none>   127m   v1.30.1   10.10.0.26    <none>        Ubuntu 20.04.6 LTS   5.4.0-216-generic   containerd://1.7.25   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/instance-type=standard-v3,beta.kubernetes.io/os=linux,failure-domain.beta.kubernetes.io/zone=ru-central1-d,kubernetes.io/arch=amd64,kubernetes.io/hostname=cl1a0l9v65916hkp0k0s-atix,kubernetes.io/os=linux,node-role=infra,node.kubernetes.io/instance-type=standard-v3,node.kubernetes.io/kube-proxy-ds-ready=true,node.kubernetes.io/masq-agent-ds-ready=true,node.kubernetes.io/node-problem-detector-ds-ready=true,topology.kubernetes.io/zone=ru-central1-d,yandex.cloud/node-group-id=cati8m9s771ole4am6ap,yandex.cloud/pci-topology=k8s,yandex.cloud/preemptible=false
+cl1msl5oumhq5k062fg1-yvas   Ready    <none>   126m   v1.30.1   10.10.0.11    <none>        Ubuntu 20.04.6 LTS   5.4.0-216-generic   containerd://1.7.25   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/instance-type=standard-v3,beta.kubernetes.io/os=linux,failure-domain.beta.kubernetes.io/zone=ru-central1-d,homework=true,kubernetes.io/arch=amd64,kubernetes.io/hostname=cl1msl5oumhq5k062fg1-yvas,kubernetes.io/os=linux,node-role=workload,node.kubernetes.io/instance-type=standard-v3,node.kubernetes.io/kube-proxy-ds-ready=true,node.kubernetes.io/masq-agent-ds-ready=true,node.kubernetes.io/node-problem-detector-ds-ready=true,topology.kubernetes.io/zone=ru-central1-d,yandex.cloud/node-group-id=catpapa7ja0hhobncdg5,yandex.cloud/pci-topology=k8s,yandex.cloud/preemptible=false
 ```
 
 ```bash
@@ -117,24 +129,144 @@ kubectl get nodes -o custom-columns=NAME:.metadata.name,TAINTS:.spec.taints
 ```
 ```
 NAME                        TAINTS
-cl15uu8ehu4ufnepn2g1-ahol   [map[effect:NoSchedule key:node-role value:infra]]
-cl1buk59kess38o2a2i6-iriz   <none>
+cl1a0l9v65916hkp0k0s-atix   [map[effect:NoSchedule key:node-role value:infra]]
+cl1msl5oumhq5k062fg1-yvas   <none>
 ```
 
 Проверить, что проект otus создался:
 ```bash
 kubectl get appproject -n argocd
-kubectl describe appproject otus -n argocd
+```
+```
+NAME      AGE
+default   126m
+otus      93m
 ```
 
+```bash
+kubectl describe appproject otus -n argocd
+```
+```
+Name:         otus
+Namespace:    argocd
+Labels:       <none>
+Annotations:  <none>
+API Version:  argoproj.io/v1alpha1
+Kind:         AppProject
+Metadata:
+  Creation Timestamp:  2025-10-23T17:50:23Z
+  Finalizers:
+    resources-finalizer.argocd.argoproj.io
+  Generation:        1
+  Resource Version:  10845
+  UID:               f3b0afc4-550a-49c7-ad51-4b9ba929cc52
+Spec:
+  Cluster Resource Whitelist:
+    Group:      *
+    Kind:       *
+  Description:  OTUS Homework Project
+  Destinations:
+    Namespace:  homework
+    Server:     https://kubernetes.default.svc
+    Namespace:  homeworkhelm
+    Server:     https://kubernetes.default.svc
+  Namespace Resource Whitelist:
+    Group:  *
+    Kind:   *
+  Roles:
+    Description:  Read-only access to OTUS applications
+    Groups:
+      otus-students
+    Name:  read-only
+    Policies:
+      p, proj:otus:read-only, applications, get, otus/*, allow
+  Source Repos:
+    git@github.com:Kuber-2025-08OTUS/SergSha_repo.git
+Events:  <none>
+```
 
--------------------------------------------
-Events:
-  Type    Reason                Age                   From                         Message
-  ----    ------                ----                  ----                         -------
-  Normal  ExternalProvisioning  95s (x26 over 7m48s)  persistentvolume-controller  Waiting for a volume to be created either by the external provisioner ###'k8s.io/minikube-hostpath'### or manually by the system administrator. If volume creation is delayed, please verify that the provisioner is running and correctly registered.
--------------------------------------------
+![alt text](<pics/Screenshot from 2025-10-23 23-26-51.png>)
 
+Проверить все работающие ресурсы в пространстве имён homework:
+```bash
+kubectl get all -n homework
+```
+```
+NAME                                    READY   STATUS    RESTARTS   AGE
+pod/nginx-deployment-77cfb74575-9l7kk   1/1     Running   0          143m
+pod/nginx-deployment-77cfb74575-fjrkq   1/1     Running   0          143m
+pod/nginx-deployment-77cfb74575-zwjwl   1/1     Running   0          143m
+
+NAME                  TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+service/web-service   ClusterIP   10.96.205.56   <none>        8080/TCP   143m
+
+NAME                               READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/nginx-deployment   3/3     3            3           143m
+
+NAME                                          DESIRED   CURRENT   READY   AGE
+replicaset.apps/nginx-deployment-77cfb74575   3         3         3       143m
+```
+
+```bash
+kubectl get ingress -n homework
+```
+```
+NAME          CLASS   HOSTS                   ADDRESS          PORTS   AGE
+web-ingress   nginx   network.homework.otus   130.193.59.123   80      145m
+```
+
+Проверить все работающие ресурсы в пространстве имён homeworkhelm:
+```bash
+kubectl get all -n homeworkhelm
+```
+```
+NAME                               READY   STATUS    RESTARTS   AGE
+pod/web-postgres-0                 1/1     Running   0          83m
+pod/web-webchart-f985f48fc-6kwbw   1/1     Running   0          83m
+pod/web-webchart-f985f48fc-9w8cx   1/1     Running   0          83m
+pod/web-webchart-f985f48fc-n27v8   1/1     Running   0          83m
+
+NAME                   TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+service/web-postgres   ClusterIP   10.96.244.201   <none>        5432/TCP   83m
+service/web-webchart   ClusterIP   10.96.221.175   <none>        8080/TCP   83m
+
+NAME                           READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/web-webchart   3/3     3            3           83m
+
+NAME                                     DESIRED   CURRENT   READY   AGE
+replicaset.apps/web-webchart-f985f48fc   3         3         3       83m
+
+NAME                            READY   AGE
+statefulset.apps/web-postgres   1/1     83m
+```
+
+```bash
+kubectl get ingress -n homeworkhelm
+```
+```
+NAME           CLASS   HOSTS                      ADDRESS          PORTS   AGE
+web-webchart   nginx   templating.homework.otus   130.193.59.123   80      84m
+```
+
+Пройти в браузере по ссылке:
+```
+https://argocd.homework.otus
+```
+
+![alt text](<pics/Screenshot from 2025-10-23 22-04-27.png>)
+
+![alt text](<pics/Screenshot from 2025-10-23 22-06-00.png>)
+
+![alt text](<pics/Screenshot from 2025-10-23 22-06-36.png>)
+
+
+Можно пройтись в браузере по следующим ссылкам:
+```
+http://network.homework.otus
+```
+```
+http://templating.homework.otus
+```
 
 
 Все конфигурации гарантируют, что:
@@ -142,26 +274,3 @@ Events:
 - Приложения разворачиваются в правильные namespace
 - Для helm-чарта переопределяется количество реплик
 - Настроены правильные политики синхронизации
-
-
-helm install my-release chart-name \
-  --set provisioner=yandex.csi.flant.com \
-  --set parameters.type=network-ssd
-
-helm install yc-storage . \
-  --set name=yc-network-ssd \
-  --set provisioner=yandex.csi.flant.com \
-  --set parameters.type=network-ssd \
-  --set reclaimPolicy=Delete \
-  --set volumeBindingMode=WaitForFirstConsumer
-
-# Установка самого CSI driver
-kubectl apply -f https://raw.githubusercontent.com/yandex-cloud/k8s-csi-sys/master/deploy/yc-disk-csi-driver.yaml
-
-# Затем создание StorageClass через Helm или manifest
-
-# Проверить StorageClass
-kubectl get storageclass
-
-# Проверить параметры
-kubectl describe storageclass yc-network-ssd
