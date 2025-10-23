@@ -6,7 +6,7 @@ metadata:
   labels:
     app: web-svc
 spec:
-  clusterIP: 10.105.67.85
+  # clusterIP: 10.105.67.85
   ports:
   - name: web
     protocol: TCP
