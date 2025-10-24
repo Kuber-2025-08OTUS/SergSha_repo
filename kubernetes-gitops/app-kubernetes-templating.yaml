@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kubernetes-templating-app
+  namespace: argocd
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: otus
+  source:
+    repoURL: 'git@github.com:Kuber-2025-08OTUS/SergSha_repo.git'
+    targetRevision: kubernetes-templating
+    path: "kubernetes-templating/webchart"
+    helm:
+      releaseName: web
+      valueFiles:
+      - values.yaml
+      parameters:
+      - name: replicaCount
+        value: "3"
+      - name: service.type
+        value: "ClusterIP"
+      - name: postgres.settings.superuserPassword.value
+        value: my_secure_password
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: homeworkhelm
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+    automated:
+      selfHeal: true
+      prune: true

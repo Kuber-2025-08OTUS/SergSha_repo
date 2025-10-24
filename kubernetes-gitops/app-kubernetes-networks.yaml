@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kubernetes-networks-app
+  namespace: argocd
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: otus
+  source:
+    repoURL: 'git@github.com:Kuber-2025-08OTUS/SergSha_repo.git'
+    targetRevision: kubernetes-networks
+    path: kubernetes-networks
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: homework
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+    automated:
+      selfHeal: false
+      prune: false
+  ignoreDifferences:
+  - group: apps
+    kind: Deployment
+    jsonPointers:
+    - /spec/replicas

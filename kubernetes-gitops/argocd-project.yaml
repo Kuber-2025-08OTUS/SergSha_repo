@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: otus
+  namespace: argocd
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  description: "OTUS Homework Project"
+  sourceRepos:
+  - 'git@github.com:Kuber-2025-08OTUS/SergSha_repo.git'
+  destinations:
+  # - namespace: '*'
+  #   server: https://kubernetes.default.svc
+  - namespace: homework
+    server: https://kubernetes.default.svc
+  - namespace: homeworkhelm
+    server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+  - group: '*'
+    kind: '*'
+  namespaceResourceWhitelist:
+  - group: '*'
+    kind: '*'
+  roles:
+  - name: read-only
+    description: Read-only access to OTUS applications
+    policies:
+    - p, proj:otus:read-only, applications, get, otus/*, allow
+    groups:
+    - otus-students
