@@ -1,0 +1,9 @@
+.env
+.terraform
+.terragrunt-cache
+.terraform.lock.hcl
+.terraform.tfstate.lock.info
+*.tfstate
+*tfstate.backup
+.DS_Store
+vault-keys.json
