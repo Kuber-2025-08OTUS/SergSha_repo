@@ -37,7 +37,7 @@ yc_folder_id = "..."
 
 #### 2. Развертывание кластера Kubernetes
 
-В директории **kubernetes-vault** выполнить следующую команду:
+В директории **kubernetes-csi** выполнить следующую команду:
 ```bash
 terraform -chdir=./terraform init && \
 terraform -chdir=./terraform apply -auto-approve
@@ -112,7 +112,7 @@ helm install contour contour/contour -n projectcontour --create-namespace
 ```
 
 ```bash
-kubectl apply -f kubernetes/contour.yaml
+kubectl apply -f kubernetes/ingress.yaml
 ```
 
 Добавить строку в /etc/hosts (добавляем внешний ip адрес балансировщика YandexCloud):
