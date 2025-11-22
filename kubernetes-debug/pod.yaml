@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-pod
+  namespace: homework
+spec:
+  # securityContext:
+  #   runAsUser: 1000
+  #   runAsGroup: 1000
+  #   fsGroup: 1000
+  containers:
+  - name: nginx
+    image: kyos0109/nginx-distroless
+    ports:
+    - containerPort: 80
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+    securityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+      allowPrivilegeEscalation: false
+    volumeMounts:
+    - name: nginx-temp
+      mountPath: /var/cache/nginx
+    - name: nginx-run
+      mountPath: /var/run
+    env:
+    - name: NGINX_ENTRYPOINT_QUIET_LOGS
+      value: "1"
+  volumes:
+  - name: nginx-temp
+    emptyDir: {}
+  - name: nginx-run
+    emptyDir: {}
