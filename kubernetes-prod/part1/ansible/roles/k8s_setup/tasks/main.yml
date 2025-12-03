@@ -1,0 +1,235 @@
+---
+# tasks file for kubernetes
+
+# # sudo ufw disable
+# - name: Allow everything and enable UFW
+#   community.general.ufw:
+#     state: disabled
+#     # policy: allow
+
+# sudo systemctl disable --now ufw.service
+- name: Disable UFW service
+  ansible.builtin.service:
+    name: ufw
+    state: stopped
+    enabled: false
+
+# sudo swapoff -av
+- name: Obtain list of swap images
+  ansible.builtin.shell: "cat /proc/swaps | grep .img | awk '{print $1}'"
+  changed_when: False
+  register: isset_swapoff_images
+
+- name: when swap is present
+  block:
+    - name: Disable swap
+      ansible.builtin.command: swapoff -a
+
+    - name: Remove swap image
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ isset_swapoff_images.stdout_lines }}"
+
+    - name: Disable swap in fstab
+      ansible.builtin.mount:
+        src: '{{ item }}'
+        path: none
+        fstype: swap
+        state: absent
+      loop: "{{ isset_swapoff_images.stdout_lines }}"
+  when:
+    - isset_swapoff_images.stdout_lines | length > 0
+
+# sudo modprobe br_netfilter
+# echo 'br_netfilter' | sudo tee /etc/modules-load.d/br_netfilter.conf
+- name: Add the br_netfilter module and make sure it is loaded after reboots
+  community.general.modprobe:
+    name: br_netfilter
+    state: present
+    persistent: present
+
+# sudo echo 'net.ipv4.ip_forward=1' >> /etc/sysctl.conf && sudo sysctl -p
+- name: Turn on net.ipv4.ip_forward
+  ansible.posix.sysctl:
+    name: '{{ item }}'
+    value: '1'
+    sysctl_set: true
+    state: present
+    reload: true
+  loop:
+    - net.ipv4.ip_forward
+    - net.bridge.bridge-nf-call-iptables
+    - net.bridge.bridge-nf-call-ip6tables
+
+# sudo apt update && sudo apt-get install -y apt-transport-https ca-certificates curl gpg
+- name: Installing dependencies
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gpg
+    state: present
+    update_cache: true
+
+# curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key \
+# | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+- name: Adding public key for kubernetes repo
+  ansible.builtin.apt_key:
+    # id: 9FED2BCBDCD29CDF762678CBAED4B06F473041FA
+    url: "https://pkgs.k8s.io/core:/stable:/v{{ k8s.version.current }}/deb/Release.key"
+    keyring: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+# echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] \
+# https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+- name: Adding kubernetes repo
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v{{ k8s.version.current }}/deb/ /"
+    state: present
+    filename: /etc/apt/sources.list.d/kubernetes
+
+# sudo apt update && sudo apt-get install -y kubelet kubeadm kubectl
+- name: Installing packages
+  ansible.builtin.apt:
+    name:
+      - containerd
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: present
+    update_cache: true
+  async: 1800  # increase the waiting time
+  poll: 30
+  register: install_result
+  until: install_result is success
+  retries: 5
+  delay: 30  # wait 30 seconds between attempts
+
+# sudo apt-mark hold kubelet kubeadm kubectl
+- name: Hold packages versions
+  ansible.builtin.command: apt-mark hold kubelet kubeadm kubectl
+
+# sudo mkdir /etc/containerd
+- name: Create a directory for containerd config
+  ansible.builtin.file:
+    path: /etc/containerd
+    state: directory
+    # owner: root
+    # group: root
+    # mode: '0755'
+
+# containerd config default | sudo tee /etc/containerd/config.toml
+- name: Create containerd config
+  ansible.builtin.shell: "containerd config default | tee /etc/containerd/config.toml"
+
+# sudo nano /etc/containerd/config.toml
+- name: Modify containerd config
+  ansible.builtin.lineinfile:
+    path: /etc/containerd/config.toml
+    regexp: '{{ item.regexp }}'
+    line: '{{ item.line }}'
+  loop:
+    - { regexp: 'sandbox_image =', line: '    sandbox_image = "registry.k8s.io/pause:3.10"' }
+    - { regexp: 'SystemdCgroup =', line: '            SystemdCgroup = true' }
+    - { regexp: 'plugins."io.containerd.grpc.v1.cri".registry.mirrors', line: '      [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]' }
+
+# sudo nano /etc/containerd/config.toml
+- name: Modify containerd config
+  ansible.builtin.lineinfile:
+    path: /etc/containerd/config.toml
+    insertafter: 'plugins."io.containerd.grpc.v1.cri".registry.mirrors'
+    line: '        endpoint = ["https://mirror.gcr.io"]'
+
+# sudo systemctl restart containerd kubelet
+- name: Restarting containerd service
+  ansible.builtin.service:
+    name: '{{ item }}'
+    state: restarted
+    enabled: true
+  loop:
+    - containerd
+    - kubelet
+
+# (option) sudo crictl config --set runtime-endpoint=unix:///run/containerd/containerd.sock --set image-endpoint=unix:///run/containerd/containerd.sock
+
+# sudo kubeadm config images pull
+- name: Downloading images for Control Plane
+  ansible.builtin.command: kubeadm config images pull
+  when: inventory_hostname in groups.master[0]
+
+# sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+- name: Initialization kubernetes cluster
+  ansible.builtin.command: kubeadm init --pod-network-cidr=10.244.0.0/16
+  register: init_result
+  when: inventory_hostname in groups.master[0]
+
+# - name: Get result var
+#   ansible.builtin.debug:
+#     var: init_result.stdout_lines
+#   when: inventory_hostname in groups.master[0]
+
+# - name: Get result msg
+#   ansible.builtin.debug:
+#     msg: "{{ init_result.stdout_lines }}"
+#   when: inventory_hostname in groups.master[0]
+
+# scp -r .kube worker01: ; scp -r .kube worker02: ; scp -r .kube worker03:
+- name: Fetch a kubeconfig file to /tmp
+  ansible.builtin.fetch:
+    src: /etc/kubernetes/admin.conf
+    dest: /tmp/fetched
+    # owner: {{ ansible_user }}
+    # group: {{ ansible_user }}
+    mode: '0600'
+    flat: false
+  when: inventory_hostname in groups.master[0]
+
+# mkdir -p $HOME/.kube
+- name: Create a directory for kubeconfig if it does not exist
+  ansible.builtin.file:
+    path: '/home/{{ ansible_user }}/.kube'
+    state: directory
+    owner: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
+    mode: '0700'
+  become: false
+  
+- name: Copy kubeconfig from /tmp to /user/{{ ansible_user }}/.kube
+  ansible.builtin.copy:
+    src: "/tmp/fetched/{{ groups.master[0] }}/etc/kubernetes/admin.conf"
+    dest: "/home/{{ ansible_user }}/.kube/config"
+    owner: '{{ ansible_user }}'
+    group: '{{ ansible_user }}'
+    mode: '0600'
+  become: false
+
+# kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+- name: Setup flannel plugin
+  ansible.builtin.command: "kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml --kubeconfig /home/{{ ansible_user }}/.kube/config"
+  become: false
+  when: inventory_hostname in groups.master[0]
+
+# kubeadm token create --print-join-command
+- name: Create kube token
+  ansible.builtin.command: kubeadm token create --print-join-command
+  register: create_token
+  when: inventory_hostname in groups.master[0]
+
+- name: Pass command to other servers
+  ansible.builtin.set_fact:
+    join_command: "{{ create_token.stdout }}"
+  delegate_to: '{{ item }}'
+  delegate_facts: true
+  when: inventory_hostname in groups.master[0]
+  loop: '{{ groups.all }}'
+
+# - name: Get result var
+#   ansible.builtin.debug:
+#     var: join_command
+
+# sudo kubeadm join <ip>:6443 --token <token> --discovery-token-ca-cert-hash <discovery-token-ca-cert-hash>
+- name: Join other nodes to Kubernetes cluster
+  ansible.builtin.command: "{{ join_command }}"
+  when: inventory_hostname not in groups.master[0]
+

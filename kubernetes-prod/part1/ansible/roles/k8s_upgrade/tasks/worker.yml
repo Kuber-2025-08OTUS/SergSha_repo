@@ -1,0 +1,91 @@
+---
+# kubectl drain worker01 --ignore-daemonsets --delete-emptydir-data
+- name: Prepare the node for maintenance by marking it unschedulable and evicting the workloads
+  ansible.builtin.command: 'kubectl drain {{ vm_item }} --ignore-daemonsets --delete-emptydir-data --kubeconfig /home/{{ ansible_user }}/.kube/config'
+  become: false
+  when: inventory_hostname in groups.master[0]
+
+- block:
+  # kubeadm version -o short
+  - name: "{{ vm_item }}: Get current version of kubeadm"
+    ansible.builtin.command: kubeadm version -o short
+    register: kubeadm_version
+  
+  - name: "{{ vm_item }}: Print current version of kubeadm"
+    ansible.builtin.debug:
+      msg: 'On {{ vm_item }} current kubeadm version is {{ kubeadm_version.stdout }}'
+  
+  # curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.34/deb/Release.key \
+  # | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  - name: "{{ vm_item }}: Adding public key for kubernetes repo"
+    ansible.builtin.apt_key:
+      # id: 9FED2BCBDCD29CDF762678CBAED4B06F473041FA
+      url: "https://pkgs.k8s.io/core:/stable:/v{{ k8s.version.upgrade }}/deb/Release.key"
+      keyring: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  
+  # echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] \
+  # https://pkgs.k8s.io/core:/stable:/v1.34/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+  - name: "{{ vm_item }}: Adding kubernetes repo"
+    ansible.builtin.apt_repository:
+      repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v{{ k8s.version.upgrade }}/deb/ /"
+      state: present
+      filename: /etc/apt/sources.list.d/kubernetes
+  
+  # sudo apt-mark unhold kubeadm kubelet kubectl
+  - name: "{{ vm_item }}: Unhold packages versions"
+    ansible.builtin.command: apt-mark unhold kubeadm kubelet kubectl
+  
+  # apt update
+  # apt install -y kubeadm=1.34.2-1.1
+  - name: "{{ vm_item }}: Upgrading kubeadm"
+    ansible.builtin.apt:
+      name: kubeadm     #='{{ k8s.version.upgrade }}-1.1'
+      state: latest
+      update_cache: true
+
+  # kubeadm upgrade node
+  - name: "{{ vm_item }}: Upgrading kubernetes node"
+    ansible.builtin.command: kubeadm upgrade node
+  
+  # sudo apt-mark hold kubeadm
+  - name: "{{ vm_item }}: Unhold packages versions"
+    ansible.builtin.command: apt-mark hold kubeadm
+
+  # apt install -y kubelet=1.34.2-1.1 kubectl=1.34.2-1.1
+  - name: "{{ vm_item }}: Upgrading kubelet kubectl"
+    ansible.builtin.apt:
+      name: 
+        - kubelet     #='{{ k8s.version.upgrade }}-1.1'
+        - kubectl     #='{{ k8s.version.upgrade }}-1.1'
+      state: latest
+      update_cache: true
+
+  # systemctl daemon-reload
+  # systemctl restart kubelet
+  - name: "{{ vm_item }}: Restarting kubelet service"
+    ansible.builtin.service:
+      name: kubelet
+      state: restarted
+      enabled: true
+      daemon-reload: true
+  
+  # sudo apt-mark hold kubeadm
+  - name: "{{ vm_item }}: Hold packages versions"
+    ansible.builtin.command: apt-mark hold kubelet kubectl
+  
+  # kubeadm version -o short
+  - name: "{{ vm_item }}: Get version of upgraded kubeadm"
+    ansible.builtin.command: kubeadm version -o short
+    register: upgraded_kubeadm_version
+  
+  - name: "{{ vm_item }}: Print version of upgraded kubeadm"
+    ansible.builtin.debug:
+      msg: 'On {{ vm_item }} upgraded kubeadm version is {{ upgraded_kubeadm_version.stdout }}'
+
+  when: "inventory_hostname in vm_item"
+
+# kubectl uncordon worker01
+- name: Bring the node back online by marking it schedulable
+  ansible.builtin.command: 'kubectl uncordon {{ vm_item }} --kubeconfig /home/{{ ansible_user }}/.kube/config'
+  become: false
+  when: inventory_hostname in groups.master[0]

@@ -1,0 +1,6 @@
+---
+- name: "Deploying Kubernetes Cluster" 
+  hosts: all
+  become: true
+  roles:
+    - { role: k8s_setup, tags: k8s_setup }

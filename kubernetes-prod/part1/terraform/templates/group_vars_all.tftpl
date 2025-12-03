@@ -1,0 +1,6 @@
+ansible_user: ${ user.name }
+
+k8s:
+    version:
+        current: "${ k8s.version.current }"
+        upgrade: "${ k8s.version.upgrade }"
