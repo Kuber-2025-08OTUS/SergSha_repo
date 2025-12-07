@@ -1,0 +1,16 @@
+[defaults]
+inventory = ./inventory.ini
+remote_user = ${ user.name }
+private_key_file = ${ user.ssh.private_key }
+host_key_checking = False
+command_warnings = False
+deprecation_warnings = False
+
+[privilege_escalation]
+become = True
+become_method = sudo
+become_user = root
+become_ask_pass = False
+
+[ssh_connection]
+ssh_args = -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyJump=${ user.name }@${ master[0].network_interface[0].nat_ip_address }

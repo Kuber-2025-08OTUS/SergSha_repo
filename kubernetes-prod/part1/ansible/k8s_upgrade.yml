@@ -1,0 +1,6 @@
+---
+- name: "Upgrading Kubernetes Cluster" 
+  hosts: all
+  become: true
+  roles:
+    - { role: k8s_upgrade, tags: k8s_upgrade }

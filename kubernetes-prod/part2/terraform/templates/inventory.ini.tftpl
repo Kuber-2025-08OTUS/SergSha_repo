@@ -1,0 +1,20 @@
+[all]
+%{ for vm in master ~}
+${ vm["name"] } ansible_host=${ vm.network_interface[0].ip_address } ip=${ vm.network_interface[0].ip_address } etcd_member_name=${ vm.metadata.etcd_member_name }
+%{ endfor ~}
+%{ for vm in worker ~}
+${ vm["name"] } ansible_host=${ vm.network_interface[0].ip_address } ip=${ vm.network_interface[0].ip_address }
+%{ endfor ~}
+
+[kube_control_plane]
+%{ for vm in master ~}
+${ vm["name"] }
+%{ endfor ~}
+
+[etcd:children]
+kube_control_plane
+
+[kube_node]
+%{ for vm in worker ~}
+${ vm["name"] }
+%{ endfor ~}

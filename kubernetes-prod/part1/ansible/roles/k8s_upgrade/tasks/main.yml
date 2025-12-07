@@ -1,0 +1,10 @@
+---
+- name: Include tasks for master group
+  include_tasks: master.yml
+  when: inventory_hostname in groups.master
+
+- name: Include tasks for worker group
+  include_tasks: worker.yml
+  loop: '{{ groups.worker }}' 
+  loop_control:
+    loop_var: vm_item
